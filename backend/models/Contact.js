@@ -1,0 +1,50 @@
+import mongoose from 'mongoose';
+
+const contactSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true
+  },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    lowercase: true,
+    trim: true
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
+  subject: {
+    type: String,
+    required: [true, 'Subject is required'],
+    trim: true
+  },
+  message: {
+    type: String,
+    required: [true, 'Message is required'],
+    trim: true
+  },
+  status: {
+    type: String,
+    enum: ['new', 'read', 'responded', 'closed'],
+    default: 'new'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+contactSchema.pre('save', function() {
+  this.updatedAt = Date.now();
+});
+
+const Contact = mongoose.model('Contact', contactSchema);
+
+export default Contact;
