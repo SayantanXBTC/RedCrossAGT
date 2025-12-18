@@ -15,7 +15,15 @@ This is a full-stack web application designed to showcase the humanitarian work 
 
 ---
 
-## 🚀 Quick Start
+## 🌐 Live Deployment
+
+- **Website**: https://redcrosstrp.netlify.app
+- **Admin Dashboard**: https://redcrosstrp.netlify.app/admin
+- **Admin Credentials**: 
+  - Email: admin@redcrosstripura.org
+  - Password: admin123
+
+## 🚀 Quick Start (Local Development)
 
 ### Frontend
 
@@ -36,6 +44,15 @@ npm run dev
 ```
 
 API runs on: `http://localhost:5000`
+
+## 📦 Deployment
+
+See **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** for complete deployment instructions.
+
+**Quick Summary:**
+- **Backend**: Render.com (FREE)
+- **Frontend**: Netlify (FREE)
+- **Database**: MongoDB Atlas
 
 ---
 
