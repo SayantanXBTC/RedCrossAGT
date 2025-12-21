@@ -1,20 +1,11 @@
-import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import logger from '../utils/logger.js';
 
-// Determine which email service to use
-const USE_SENDGRID_API = process.env.SENDGRID_API_KEY ? true : false;
-
-// Configure SendGrid if API key is available
-if (USE_SENDGRID_API) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  logger.info('📧 Email service: SendGrid API');
-} else {
-  logger.info('📧 Email service: SMTP (Nodemailer)');
-}
-
-// Create SMTP transporter (fallback)
+// Create transporter
 const createTransporter = () => {
+  // For development, use ethereal email (fake SMTP)
+  // For production, use real SMTP credentials from .env
+
   if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     const config = {
       host: process.env.EMAIL_HOST,
@@ -24,13 +15,16 @@ const createTransporter = () => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      connectionTimeout: 10000,
+      // Add timeout and connection settings for cloud environments
+      connectionTimeout: 10000, // 10 seconds
       greetingTimeout: 10000,
       socketTimeout: 10000,
+      // Add TLS options for better compatibility
       tls: {
-        rejectUnauthorized: false,
+        rejectUnauthorized: false, // Allow self-signed certificates
         minVersion: 'TLSv1.2'
       },
+      // Enable debug logging to troubleshoot
       debug: true,
       logger: true
     };
@@ -45,13 +39,14 @@ const createTransporter = () => {
     return nodemailer.createTransport(config);
   }
 
+  // Fallback: log emails to console in development
   logger.warn('Email service not configured. Emails will be logged to console.');
   return null;
 };
 
-const transporter = USE_SENDGRID_API ? null : createTransporter();
+const transporter = createTransporter();
 
-// Verify transporter connection on startup (only for SMTP)
+// Verify transporter connection on startup
 if (transporter) {
   transporter.verify((error, success) => {
     if (error) {
@@ -156,6 +151,7 @@ const templates = {
     `
   }),
 
+  // Automated acceptance email template (same for both Volunteer and Member forms)
   applicationAccepted: (name) => ({
     subject: 'Application Approved – Indian Red Cross Society, Tripura',
     html: `
@@ -186,36 +182,11 @@ const templates = {
   })
 };
 
-// Send email function - supports both SendGrid API and SMTP
+// Send email function
 export const sendEmail = async (to, template) => {
   try {
-    // Use SendGrid API if available
-    if (USE_SENDGRID_API) {
-      const msg = {
-        to,
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'ircstrp@gmail.com',
-        subject: template.subject,
-        html: template.html,
-        text: template.html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-      };
-
-      logger.info(`📧 Sending email via SendGrid API to: ${to}`);
-      logger.info(`📧 Subject: ${template.subject}`);
-
-      const response = await sgMail.send(msg);
-      
-      logger.info(`✅ Email sent successfully via SendGrid!`);
-      logger.info(`📧 Status Code: ${response[0].statusCode}`);
-
-      return { 
-        success: true, 
-        messageId: response[0].headers['x-message-id'],
-        service: 'sendgrid-api'
-      };
-    }
-
-    // Fallback to SMTP
     if (!transporter) {
+      // Log email to console if transporter not configured
       logger.info('📧 Email (not sent - no config):', {
         to,
         subject: template.subject,
@@ -225,33 +196,40 @@ export const sendEmail = async (to, template) => {
     }
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM || `"Indian Red Cross Society - Tripura" <${process.env.EMAIL_USER}>`,
       to,
       subject: template.subject,
       html: template.html,
+      // Add text version for better deliverability
       text: template.html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
     };
 
-    logger.info(`📧 Attempting to send email via SMTP to: ${to}`);
+    logger.info(`📧 Attempting to send email to: ${to}`);
     logger.info(`📧 Subject: ${template.subject}`);
 
     const info = await transporter.sendMail(mailOptions);
     
-    logger.info(`✅ Email sent successfully via SMTP!`);
+    logger.info(`✅ Email sent successfully!`);
     logger.info(`📧 Message ID: ${info.messageId}`);
     logger.info(`📧 Response: ${info.response}`);
+    logger.info(`📧 Accepted: ${info.accepted}`);
+    logger.info(`📧 Rejected: ${info.rejected}`);
 
     return { 
       success: true, 
       messageId: info.messageId,
-      service: 'smtp'
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response
     };
   } catch (error) {
     logger.error('❌ Email send error:', error);
     logger.error('❌ Error details:', {
       message: error.message,
       code: error.code,
-      response: error.response
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
     });
     return { success: false, error: error.message };
   }
@@ -283,6 +261,7 @@ export const sendContactAcknowledgmentEmail = async (email, name, subject) => {
   return await sendEmail(email, templates.contactAcknowledgment(name, subject));
 };
 
+// Automated acceptance email function (for both Volunteer and Member forms)
 export const sendApplicationAcceptedEmail = async (email, name) => {
   try {
     logger.info(`📧 Sending acceptance email to: ${email} for ${name}`);

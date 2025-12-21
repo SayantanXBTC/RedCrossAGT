@@ -28,10 +28,10 @@ services:
       - key: EMAIL_SECURE
         value: false
       - key: EMAIL_USER
-        value: ircstrp@gmail.com
+        sync: false
       - key: EMAIL_PASS
-        value: txwvdudpjrhzlmmq
+        sync: false
       - key: EMAIL_FROM
-        value: "Indian Red Cross Society - Tripura" <ircstrp@gmail.com>
+        sync: false
       - key: ADMIN_EMAIL
-        value: ircstrp@gmail.com
+        sync: false
