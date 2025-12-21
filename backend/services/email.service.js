@@ -7,7 +7,7 @@ const createTransporter = () => {
   // For production, use real SMTP credentials from .env
 
   if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    return nodemailer.createTransport({
+    const config = {
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT) || 587,
       secure: process.env.EMAIL_SECURE === 'true',
@@ -21,13 +21,22 @@ const createTransporter = () => {
       socketTimeout: 10000,
       // Add TLS options for better compatibility
       tls: {
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
+        rejectUnauthorized: false, // Allow self-signed certificates
         minVersion: 'TLSv1.2'
       },
-      // Enable debug logging in production to troubleshoot
-      debug: process.env.NODE_ENV === 'production',
-      logger: process.env.NODE_ENV === 'production'
+      // Enable debug logging to troubleshoot
+      debug: true,
+      logger: true
+    };
+
+    logger.info('📧 Email transporter configured:', {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      user: config.auth.user
     });
+
+    return nodemailer.createTransport(config);
   }
 
   // Fallback: log emails to console in development
@@ -36,6 +45,17 @@ const createTransporter = () => {
 };
 
 const transporter = createTransporter();
+
+// Verify transporter connection on startup
+if (transporter) {
+  transporter.verify((error, success) => {
+    if (error) {
+      logger.error('❌ Email transporter verification failed:', error);
+    } else {
+      logger.info('✅ Email transporter is ready to send emails');
+    }
+  });
+}
 
 // Email templates
 const templates = {
@@ -176,18 +196,41 @@ export const sendEmail = async (to, template) => {
     }
 
     const mailOptions = {
-      from: `"Indian Red Cross Society - Tripura" <ircstrp@gmail.com>`,
+      from: process.env.EMAIL_FROM || `"Indian Red Cross Society - Tripura" <${process.env.EMAIL_USER}>`,
       to,
       subject: template.subject,
-      html: template.html
+      html: template.html,
+      // Add text version for better deliverability
+      text: template.html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    logger.info(`📧 Email sent: ${info.messageId}`);
+    logger.info(`📧 Attempting to send email to: ${to}`);
+    logger.info(`📧 Subject: ${template.subject}`);
 
-    return { success: true, messageId: info.messageId };
+    const info = await transporter.sendMail(mailOptions);
+    
+    logger.info(`✅ Email sent successfully!`);
+    logger.info(`📧 Message ID: ${info.messageId}`);
+    logger.info(`📧 Response: ${info.response}`);
+    logger.info(`📧 Accepted: ${info.accepted}`);
+    logger.info(`📧 Rejected: ${info.rejected}`);
+
+    return { 
+      success: true, 
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response
+    };
   } catch (error) {
-    logger.error('Email send error:', error);
+    logger.error('❌ Email send error:', error);
+    logger.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    });
     return { success: false, error: error.message };
   }
 };

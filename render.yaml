@@ -24,14 +24,14 @@ services:
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT
-        value: 465
+        value: 587
       - key: EMAIL_SECURE
-        value: true
+        value: false
       - key: EMAIL_USER
-        sync: false
+        value: ircstrp@gmail.com
       - key: EMAIL_PASS
-        sync: false
+        value: txwvdudpjrhzlmmq
       - key: EMAIL_FROM
-        sync: false
+        value: "Indian Red Cross Society - Tripura" <ircstrp@gmail.com>
       - key: ADMIN_EMAIL
-        sync: false
+        value: ircstrp@gmail.com
