@@ -68,7 +68,9 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'Indian Red Cross Society - Tripura API Server',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    emailService: process.env.SENDGRID_API_KEY ? 'SendGrid API' : 'SMTP',
+    emailConfigured: !!(process.env.SENDGRID_API_KEY || (process.env.EMAIL_HOST && process.env.EMAIL_USER))
   });
 });
 
