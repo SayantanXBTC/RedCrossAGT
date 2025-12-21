@@ -9,12 +9,24 @@ const createTransporter = () => {
   if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT || 587,
+      port: parseInt(process.env.EMAIL_PORT) || 587,
       secure: process.env.EMAIL_SECURE === 'true',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      // Add timeout and connection settings for cloud environments
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+      // Add TLS options for better compatibility
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === 'production',
+        minVersion: 'TLSv1.2'
+      },
+      // Enable debug logging in production to troubleshoot
+      debug: process.env.NODE_ENV === 'production',
+      logger: process.env.NODE_ENV === 'production'
     });
   }
 
